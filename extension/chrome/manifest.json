@@ -42,6 +42,6 @@
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://chat.openai.com/*",
-    "http://localhost:8000/*"
+    "https://chatbook-415l.onrender.com/*"
   ]
 }

@@ -8,4 +8,4 @@
  * calls the exact same `/api/parse` and `/api/generate-pdf` endpoints the
  * web app uses; no parser or PDF logic is duplicated anywhere here.
  */
-export const BACKEND_BASE_URL = "http://localhost:8000/api";
+export const BACKEND_BASE_URL = "https://chatbook-415l.onrender.com/api";
