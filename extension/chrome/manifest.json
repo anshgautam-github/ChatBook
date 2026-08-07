@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatBook — Export ChatGPT to PDF",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Turn a ChatGPT shared conversation into structured study notes and a professionally formatted PDF.",
   "icons": {
     "16": "icons/icon16.png",
