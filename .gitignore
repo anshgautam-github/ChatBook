@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/tmp/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Browser extension (generated — see extension/scripts/build.js)
+extension/dist/
+extension/safari-xcode/
+
+# Env
+.env
+*.env.local
+
+# OS
+.DS_Store

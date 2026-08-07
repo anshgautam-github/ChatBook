@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{ title }}</title>
+<style>
+  /* =====================================================================
+     PAGE SETUP
+     Two named pages: "front-matter" (cover + TOC — no footer, no running
+     head) and "content" (every chapter — numbered footer starting at 1,
+     book-style running heads). Left/right margins mirror like a printed
+     book (a wider inner margin, a narrower outer one) via the :left/:right
+     page pseudo-classes, which apply to every named page underneath them
+     since a more specific @page rule only overrides the properties it
+     actually sets.
+     ===================================================================== */
+  @page {
+    size: A4;
+    margin-top: 2.4cm;
+    margin-bottom: 2.6cm;
+  }
+
+  @page :right {
+    margin-left: 2.2cm;
+    margin-right: 2.9cm;
+  }
+
+  @page :left {
+    margin-left: 2.9cm;
+    margin-right: 2.2cm;
+  }
+
+  @page front-matter {
+    @bottom-center { content: none; }
+    @top-center { content: none; }
+  }
+
+  @page content {
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8.5px;
+      letter-spacing: 0.03em;
+      color: #9a968d;
+      padding-top: 6px;
+    }
+  }
+
+  /* Verso (left) pages carry the book title; recto (right) pages carry
+     the current chapter title — the same running-head convention print
+     books use. Both are set via `string-set` on the elements below. */
+  @page content:left {
+    @top-left {
+      content: string(doc-title);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #b5b0a4;
+    }
+  }
+
+  @page content:right {
+    @top-right {
+      content: string(chapter-title);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #b5b0a4;
+    }
+  }
+
+  /* =====================================================================
+     FOUNDATIONS
+     ===================================================================== */
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1c1a17;
+    line-height: 1.62;
+    font-size: 10.8px;
+  }
+
+  h1, h2, h3, h4,
+  .toc-heading, .toc-link, .toc-number,
+  .cover-eyebrow, .callout-label {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  p { margin: 0 0 12px; }
+
+  /* =====================================================================
+     COVER PAGE
+     ===================================================================== */
+  .cover-page {
+    /* Vertically centered via top padding rather than flexbox: WeasyPrint's
+       flexbox implementation was measured (in real rendering, not just
+       code review) to badly miscompute the available width for text
+       children of a non-stretched column flex container — headings and
+       the source-URL line both wrapped one word (or even one character)
+       per line instead of using the page's actual width. Plain block
+       flow + text-align + a fixed top offset sidesteps that entirely. */
+    page: front-matter;
+    text-align: center;
+    padding-top: 9cm;
+  }
+
+  .cover-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 10px;
+    font-weight: 600;
+    color: #8a8676;
+    margin: 0 0 20px;
+  }
+
+  .cover-title {
+    /* Also exposed as a book-style running header on content pages. */
+    string-set: doc-title content();
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.28;
+    color: #14202b;
+    max-width: 21cm;
+    margin: 0 auto 22px;
+  }
+
+  .cover-rule {
+    width: 44px;
+    height: 3px;
+    background: #24405c;
+    margin: 0 auto 24px;
+  }
+
+  .cover-meta-line {
+    color: #6b675f;
+    font-size: 11px;
+    margin: 0 0 6px;
+  }
+
+  .cover-source {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Courier New", monospace;
+    font-size: 9.5px;
+    color: #9a968d;
+    word-break: break-all;
+    max-width: 17cm;
+    margin: 10px auto 0;
+  }
+
+  /* =====================================================================
+     TABLE OF CONTENTS
+     ===================================================================== */
+  .toc-page {
+    page: front-matter;
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .toc-heading {
+    font-size: 23px;
+    font-weight: 700;
+    color: #14202b;
+    margin: 0 0 30px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e3e0d8;
+  }
+
+  .toc-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-entry { margin-bottom: 13px; }
+
+  /* Deliberately NOT flexbox (unlike an earlier version of this file).
+     The cover page had a confirmed real-world WeasyPrint flexbox bug
+     (text children of a centered column flex container getting a wildly
+     wrong available width), and this TOC hit the same class of problem:
+     the dotted-leader flex item collapsed to zero width instead of
+     stretching, so the page number ended up glued directly onto the
+     title text ("Prompt 11" instead of "Prompt 1 ... 1"). This uses the
+     traditional pre-flexbox print-CSS technique instead: the page number
+     is absolutely positioned at the row's right edge (reading its own
+     `href` via `target-counter`), and the title's own `::after` pseudo
+     lays down a long, over-length row of dots that simply gets clipped
+     by `overflow: hidden` on the row — no layout algorithm involved. */
+  .toc-link {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    padding-right: 2.6em;
+  }
+
+  .toc-number {
+    display: inline-block;
+    min-width: 2.1em;
+    margin-right: 0.5em;
+    font-weight: 700;
+    font-size: 10.5px;
+    color: #24405c;
+  }
+
+  .toc-title {
+    font-size: 11px;
+    color: #1c1a17;
+  }
+
+  /* Dotted leader: an intentionally over-long run of dots that overflows
+     off the right edge and gets clipped — the page number (below) sits
+     on top of wherever it gets cut off, with its own background patching
+     over the dots underneath it. */
+  .toc-title::after {
+    content: " . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ";
+    letter-spacing: 2px;
+    color: #c7c2b6;
+  }
+
+  /* Resolved via WeasyPrint's target-counter() support — the link itself
+     always still works even on a renderer that ignores this. */
+  .toc-link::after {
+    content: target-counter(attr(href), page);
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ffffff;
+    padding-left: 6px;
+    font-weight: 600;
+    font-size: 10.5px;
+    color: #6b675f;
+  }
+
+  /* =====================================================================
+     CHAPTERS
+     Every chapter starts on its own page, like a real book. Only the
+     first one also resets the page counter to 1, since front-matter
+     pages before it don't count toward "Page X of Y".
+     ===================================================================== */
+  .chapter {
+    page: content;
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .chapter--first {
+    counter-reset: page 1;
+  }
+
+  .chapter-title {
+    /* Exposed as the recto running header for this chapter's pages. */
+    string-set: chapter-title content();
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.28;
+    color: #14202b;
+    margin: 0 0 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e3e0d8;
+  }
+
+  .chapter-prompt {
+    font-style: italic;
+    color: #e7ecf1;
+    background: #1c2b3a;
+    font-size: 10.5px;
+    line-height: 1.6;
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 0 0 28px;
+    break-inside: avoid;
+  }
+
+  .chapter-prompt::before {
+    content: "Prompt";
+    display: block;
+    font-style: normal;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8fb0cc;
+    margin-bottom: 8px;
+  }
+
+  /* Links/inline code inherit sensible contrast automatically since both
+     already use `color: inherit` / an explicit light chip background —
+     only the muted "no question"/"awaiting a response" placeholder text
+     needs its own override to stay legible against this dark box. */
+  .chapter-prompt .placeholder { color: #b7c3ce; }
+
+  .chapter-prompt p:last-child,
+  .chapter-body p:last-child { margin-bottom: 0; }
+
+  .placeholder { font-style: italic; color: #8a8676; }
+
+  /* =====================================================================
+     SHARED PROSE STYLING (chapter prompt + chapter body)
+     ===================================================================== */
+  .chapter-copy h1, .chapter-copy h2, .chapter-copy h3, .chapter-copy h4 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #14202b;
+    line-height: 1.3;
+    margin: 22px 0 10px;
+  }
+
+  .chapter-copy h1 { font-size: 16px; }
+  .chapter-copy h2 { font-size: 14px; }
+  .chapter-copy h3 { font-size: 12.5px; }
+  .chapter-copy h4 { font-size: 11.5px; font-style: italic; }
+
+  .chapter-copy ul, .chapter-copy ol {
+    margin: 0 0 14px;
+    padding-left: 22px;
+  }
+
+  .chapter-copy li { margin-bottom: 4px; }
+  .chapter-copy li > ul, .chapter-copy li > ol { margin-top: 4px; margin-bottom: 0; }
+
+  .chapter-copy table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6px 0 18px;
+    font-size: 10px;
+    break-inside: avoid;
+  }
+
+  .chapter-copy th, .chapter-copy td {
+    border: 1px solid #ddd8ca;
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  .chapter-copy th {
+    background: #f3f1ea;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 700;
+  }
+
+  .chapter-copy img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 14px auto;
+    border-radius: 5px;
+  }
+
+  .chapter-copy hr {
+    border: none;
+    border-top: 1px solid #e3e0d8;
+    margin: 26px 0;
+  }
+
+  /* Fenced code blocks. `{{ pygments_css }}` below supplies the token
+     colors; this block supplies layout only, so the two stay
+     independently swappable. */
+  .codehilite {
+    background: #f6f5f0;
+    border: 1px solid #e3e0d8;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 6px 0 18px;
+    overflow-x: hidden;
+    break-inside: avoid;
+  }
+
+  .codehilite pre {
+    margin: 0;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Courier New", monospace;
+    font-size: 9.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "Courier New", monospace;
+    font-size: 0.92em;
+    background: #eef1f5;
+    color: #2c4157;
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  .codehilite code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
+  /* Pygments syntax-highlighting theme (generated in Python — see
+     app/pdf/syntax_highlighting.py — so it stays in sync with the
+     installed Pygments version instead of a hand-copied stylesheet). */
+  {{ pygments_css }}
+
+  /* =====================================================================
+     CALLOUTS
+     Every Markdown blockquote becomes a highlighted box (`.callout`).
+     `HtmlDocumentBuilder` promotes a leading "Note:" / "Tip:" /
+     "Warning:" into a colored variant + label; anything else falls back
+     to a neutral, quote-style treatment.
+     ===================================================================== */
+  .callout {
+    margin: 6px 0 18px;
+    padding: 12px 16px;
+    border-left: 3px solid #c9c5b8;
+    background: #f6f5f0;
+    border-radius: 0 6px 6px 0;
+    font-size: 10.2px;
+    break-inside: avoid;
+  }
+
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout-label {
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 6px;
+  }
+
+  .callout--quote {
+    font-style: italic;
+    color: #4a4740;
+  }
+
+  .callout--note {
+    border-left-color: #2f5d8a;
+    background: #eef3f8;
+  }
+  .callout--note .callout-label { color: #2f5d8a; }
+
+  .callout--tip {
+    border-left-color: #2f6f4f;
+    background: #eef6f1;
+  }
+  .callout--tip .callout-label { color: #2f6f4f; }
+
+  .callout--warning {
+    border-left-color: #9c5a1f;
+    background: #fbf1e6;
+  }
+  .callout--warning .callout-label { color: #9c5a1f; }
+
+  /* =====================================================================
+     LATEX
+     ===================================================================== */
+  .latex-display {
+    text-align: center;
+    margin: 14px 0;
+  }
+
+  .latex-display img {
+    max-height: 2.4em;
+  }
+
+  .latex-inline {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 0.15em;
+  }
+
+  .latex-inline img {
+    height: 1em;
+    vertical-align: middle;
+  }
+
+  .latex-fallback code {
+    background: #fbf1e6;
+    color: #7a4a12;
+  }
+</style>
+</head>
+<body>
+
+  <section class="cover-page">
+    <p class="cover-eyebrow">Study Notes</p>
+    <h1 class="cover-title">{{ title }}</h1>
+    <div class="cover-rule"></div>
+    <p class="cover-meta-line">
+      {{ section_count }} chapter{{ "s" if section_count != 1 else "" }} &middot; Generated {{ generated_at }}
+    </p>
+    {% if source_url %}<p class="cover-source">Source: {{ source_url }}</p>{% endif %}
+  </section>
+
+  {% if toc_entries %}
+  <nav class="toc-page">
+    <h2 class="toc-heading">Contents</h2>
+    <ol class="toc-list">
+      {% for entry in toc_entries %}
+      <li class="toc-entry">
+        <a class="toc-link" href="#{{ entry.anchor }}">
+          <span class="toc-number">{{ "%02d"|format(entry.index) }}</span>
+          <span class="toc-title">{{ entry.title }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+  {% endif %}
+
+  {% for section in sections %}
+    <section
+      id="{{ section.anchor }}"
+      class="chapter{% if loop.first %} chapter--first{% endif %}"
+    >
+      <h1 class="chapter-title">{{ section.toc_title }}</h1>
+
+      <div class="chapter-prompt chapter-copy">
+        {{ section.question_html | safe }}
+      </div>
+
+      <div class="chapter-body chapter-copy">
+        {{ section.answer_html | safe }}
+      </div>
+    </section>
+  {% endfor %}
+
+</body>
+</html>

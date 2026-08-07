@@ -1,0 +1,21 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+httpx==0.27.2
+slowapi==0.1.9
+beautifulsoup4==4.12.3
+lxml==5.3.0
+weasyprint==62.3
+# pydyf isn't pinned by weasyprint's own metadata, so pip is free to grab a
+# newer release. pydyf>=0.11.0 changed its Stream API and broke weasyprint
+# 62.x (`AttributeError: 'super' object has no attribute 'transform'` —
+# see https://github.com/Kozea/WeasyPrint/issues/2620). Pin it explicitly
+# until weasyprint itself is upgraded past the versions affected by this.
+pydyf<0.11.0
+jinja2==3.1.4
+Markdown==3.7
+Pygments==2.18.0
+matplotlib==3.9.2
+python-dotenv==1.0.1
+pytest==8.3.3

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="color-scheme" content="light dark" />
+<title>ChatBook</title>
+<link rel="stylesheet" href="panel.css" />
+</head>
+<body data-status="idle">
+  <div class="progress-bar hidden" id="progressBar" aria-hidden="true"></div>
+
+  <header class="header">
+    <div class="brand-row">
+      <div class="brand-mark" aria-hidden="true">
+        <img src="../icons/logo.svg" alt="" />
+      </div>
+      <div>
+        <div class="brand">ChatBook</div>
+        <p class="tagline">Turn conversations into study notes</p>
+      </div>
+    </div>
+    <button type="button" id="themeToggle" class="icon-btn" title="Toggle theme" aria-label="Toggle dark/light theme">
+      <span id="themeIcon">🌙</span>
+    </button>
+  </header>
+
+  <main id="app" class="app"></main>
+
+  <script type="module" src="panel.js"></script>
+</body>
+</html>
