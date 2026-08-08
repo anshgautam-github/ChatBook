@@ -1,4 +1,4 @@
-# gptTOpdf
+# ChatBook
 
 Turns a ChatGPT shared conversation into structured study notes and a
 textbook-styled PDF — not a chat screenshot.
